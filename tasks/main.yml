@@ -1,7 +1,30 @@
 ---
-- name: copy timesyncd default conf
-  template: src=timesyncd.conf.j2 dest=/etc/systemd/timesyncd.conf
+- name: Ask systemctl for version information
+  command: systemctl --version
+  register: systemctl_version
+  changed_when: false
+  check_mode: no
+
+- name: Extract systemd version number from version information
+  set_fact:
+    systemd_version: "{{ systemctl_version.stdout_lines[0][8:11] }}"
+
+- name: Display systemd version
+  debug:
+    verbosity: 1
+    msg: "{{ systemd_version }}"
+
+- name: Ensure systemd-timesyncd configuration file
+  template:
+    src: timesyncd.conf.j2
+    dest: /etc/systemd/timesyncd.conf
+    owner: root
+    group: root
+    mode: 0644
   notify: restart timesyncd
 
-- name: synchronize time
-  command: timedatectl set-ntp true
+- name: Configure systemd-timesyncd service state
+  service:
+    name: systemd-timesyncd
+    state: started
+    enabled: yes
